@@ -1,0 +1,32 @@
+[
+ {
+  "at": 0.35,
+  "slot": 5.6,
+  "text": "Eight p.m. The shelf is empty... and your sales report calls it a quiet hour."
+ },
+ {
+  "at": 6.5,
+  "slot": 8.4,
+  "text": "ShelfSense watches every shelf, in every dark store, hour by hour, and tells you which ones won't make it to tomorrow's truck."
+ },
+ {
+  "at": 15.3,
+  "slot": 5.7,
+  "text": "Pick one, and watch it coming. The forecast, and what really happened... almost on top of each other."
+ },
+ {
+  "at": 21.2,
+  "slot": 5.2,
+  "text": "Every call is checked against what happened next. So you know exactly when to trust it."
+ },
+ {
+  "at": 26.6,
+  "slot": 4.1,
+  "text": "All inside Exasol. Seconds to think... milliseconds to replay."
+ },
+ {
+  "at": 30.8,
+  "slot": 4.2,
+  "text": "ShelfSense. Catch the empty shelf... before your customer does."
+ }
+]

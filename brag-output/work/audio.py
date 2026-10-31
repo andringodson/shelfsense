@@ -75,10 +75,27 @@ for t0, e in events:
         n = int(0.06 * SR); tt = np.arange(n) / SR
         add(np.sin(2 * np.pi * hz(88) * tt) * np.exp(-tt * 90), t0, 0.15, 0.05)
 
-# Master: fades, gentle saturation, normalise to -1 dBFS
+# Music bus: fades + gentle saturation, normalised so the voice can sit on top
 fade = np.minimum(t / 0.4, 1) * np.clip((DUR - t) / 2.6, 0, 1)
-mix = np.stack([L, R]) * fade
-mix = np.tanh(mix * 1.4) / np.tanh(1.4)
+music = np.stack([L, R]) * fade
+music = np.tanh(music * 1.4) / np.tanh(1.4)
+music /= np.abs(music).max()
+
+# Voice bus (narration.json + vo/l<i>.wav from voice.py), centred, music ducked underneath
+import os, soundfile as sf
+voice = np.zeros_like(t)
+if os.path.exists("narration.json") and os.path.exists("vo/l0.wav"):
+    for i, l in enumerate(json.load(open("narration.json"))):
+        v, sr = sf.read(f"vo/l{i}.wav")
+        v = np.interp(np.arange(int(len(v) * SR / sr)) * sr / SR, np.arange(len(v)), v)  # resample to 48 kHz
+        a = int(l["at"] * SR); n = min(len(v), len(voice) - a); voice[a:a + n] += v[:n]
+    voice /= np.abs(voice).max()
+    # smoothed voice envelope -> ~7 dB duck on the music while she speaks
+    env = np.abs(voice); win = int(0.25 * SR)
+    env = np.convolve(env, np.ones(win) / win, mode="same"); env = np.minimum(env / (env.max() * 0.35), 1)
+    music *= 1 - 0.55 * env
+mix = music * 0.55 + np.stack([voice, voice]) * 0.9
+mix = np.tanh(mix * 1.1) / np.tanh(1.1)
 mix *= 10 ** (-1 / 20) / np.abs(mix).max()
 pcm = (mix.T * 32767).astype("<i2")
 with wave.open("soundtrack.wav", "wb") as w:
