@@ -144,4 +144,4 @@ No external APIs are called at runtime.
 
 ## Demo
 
-📹 Demo video: TODO · 📊 Pitch deck: [`docs/ShelfSense-pitch.pdf`](docs/ShelfSense-pitch.pdf)
+📹 Demo video: TODO · 📊 Pitch deck: [PDF](docs/ShelfSense-pitch.pdf) · [PPTX](docs/ShelfSense-pitch.pptx)
