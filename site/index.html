@@ -537,7 +537,17 @@ async function init() {
     renderDetail(state.data, true);
   };
   const hash = location.hash.slice(1);
-  go(/^\d{10}$/.test(hash) ? hash : state.index.default);
+  await go(/^\d{10}$/.test(hash) ? hash : state.index.default);
+  if (!live) preloadAll();
+}
+
+// Static hosting: pull every hour in the background (4 at a time) so scrubbing and replay never wait on the network.
+// Live mode skips this: each uncached hour costs a real Exasol query.
+function preloadAll() {
+  const keys = [];
+  for (let k = state.index.lo; k <= state.index.hi; k = addH(k, 1)) if (!cache.has(k)) keys.push(k);
+  const next = () => { const k = keys.shift(); if (k) load(k).catch(() => {}).finally(next); };
+  (window.requestIdleCallback || setTimeout)(() => { for (let i = 0; i < 4; i++) next(); });
 }
 init();
 </script>
