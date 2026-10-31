@@ -1,12 +1,36 @@
-# 🛒 ShelfSense: catch stock-outs before they happen
+<p align="center">
+  <img src="docs/logo.svg" width="88" alt="ShelfSense logo">
+</p>
 
-**ExaThon India 2026 · Track 02: Customers, Channels & Demand**
+<h1 align="center">ShelfSense</h1>
 
-ShelfSense is a stock-out early-warning system for quick-commerce dark stores. It runs entirely
-in SQL inside **Exasol Personal**. Every hour it scores every shelf in every store, predicts which
-ones will run empty before the next delivery truck, and says what to do about each one: move stock from a
-nearby store or expedite an order. It also measures the revenue already lost to empty shelves,
-which sales reports cannot show.
+<p align="center"><b>Catch stock-outs before they happen.</b><br>
+Stock-out early warning for quick-commerce dark stores, computed entirely in SQL inside <b>Exasol Personal</b>.</p>
+
+<p align="center">
+  <a href="https://shelfsense-exathon.vercel.app"><img alt="Live demo" src="https://img.shields.io/badge/Live_demo-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white"></a>
+  <a href="https://shelfsense-exathon.vercel.app/demo.mp4"><img alt="Demo video" src="https://img.shields.io/badge/Demo_video-35s-0F5C43?style=for-the-badge&logo=youtube&logoColor=white"></a>
+  <a href="https://shelfsense-exathon.vercel.app/pitch.pdf"><img alt="Pitch deck PDF" src="https://img.shields.io/badge/Pitch_deck-PDF-C96A0A?style=for-the-badge&logo=adobeacrobatreader&logoColor=white"></a>
+  <a href="https://github.com/andringodson/shelfsense/raw/main/docs/ShelfSense-pitch.pptx"><img alt="Pitch deck PPTX" src="https://img.shields.io/badge/Pitch_deck-PPTX-B7472A?style=for-the-badge&logo=microsoftpowerpoint&logoColor=white"></a>
+</p>
+
+<p align="center">
+  <img alt="Exasol Personal" src="https://img.shields.io/badge/Exasol-Personal-1F7A55">
+  <img alt="ExaThon India 2026" src="https://img.shields.io/badge/ExaThon_India_2026-Track_02-F2A541">
+  <img alt="License MIT" src="https://img.shields.io/badge/license-MIT-blue">
+  <img alt="Python 3.10+" src="https://img.shields.io/badge/python-3.10%2B-3776AB">
+</p>
+
+<p align="center">
+  <a href="https://shelfsense-exathon.vercel.app/demo.mp4"><img src="docs/demo.gif" width="860" alt="ShelfSense replaying a Saturday: KPIs count, the action board re-ranks live"></a><br>
+  <sub>▶ Click for the full 35-second demo video · <a href="https://shelfsense-exathon.vercel.app">try it live</a></sub>
+</p>
+
+**Quick links:** [🌐 Live dashboard](https://shelfsense-exathon.vercel.app) · [📹 Demo video](https://shelfsense-exathon.vercel.app/demo.mp4) · [📊 Deck (PDF)](https://shelfsense-exathon.vercel.app/pitch.pdf) · [📎 Deck (PPTX)](https://github.com/andringodson/shelfsense/raw/main/docs/ShelfSense-pitch.pptx) · [⚙️ Setup](#setup-and-run) · [🧠 How it works](#why-exasol) · [📈 Results](#results-simulated-network-replay-at-sat-24-oct-2026-0800)
+
+---
+
+ShelfSense scores every shelf in every store each hour. It predicts which ones will run empty before the next delivery truck, and says what to do about each one: move stock from a nearby store or expedite an order. It also measures the revenue already lost to empty shelves, which sales reports cannot show.
 
 ![dashboard](docs/dashboard.png)
 
@@ -154,4 +178,8 @@ No external APIs are called at runtime. The dashboard is plain HTML, CSS and Jav
 
 ## Demo
 
-📹 Demo video: [brag-output/brag.mp4](brag-output/brag.mp4) (35 s, captured from the real dashboard) · 📊 Pitch deck: [PDF](docs/ShelfSense-pitch.pdf) · [PPTX](docs/ShelfSense-pitch.pptx)
+| | |
+|---|---|
+| 📹 **Demo video** (35 s, captured from the real dashboard) | [Watch in browser](https://shelfsense-exathon.vercel.app/demo.mp4) · [file in repo](brag-output/brag.mp4) |
+| 📊 **Pitch deck** | [PDF in browser](https://shelfsense-exathon.vercel.app/pitch.pdf) · [PDF](docs/ShelfSense-pitch.pdf) · [PPTX](docs/ShelfSense-pitch.pptx) |
+| 🌐 **Live dashboard** | [shelfsense-exathon.vercel.app](https://shelfsense-exathon.vercel.app) |
