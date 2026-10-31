@@ -33,12 +33,13 @@ On our simulated network of 25 stores, **~5.7 % of all demand goes unserved** be
 |---|---|
 | 🚨 **Action board** | Every store × product scored for *P(empty before the 06:00 truck)*, with hours until empty, ₹ at risk, and a concrete fix: *"Transfer 14 from DS03 (Indiranagar)"* or *"Expedite 24 units (2 cases)"*. |
 | 📉 **Lost sales** | Estimates the demand hidden behind every empty-shelf hour and values it in ₹, by day and category. |
-| 🎯 **Backtest** | Replay any past hour. ShelfSense sees only data up to that moment, then its calls are scored against what actually happened (precision, recall, calibration). |
-| 🔍 **Drill-down** | Stock, sales and the 48-hour forecast for any shelf. |
+| ⏯️ **Live replay** | Scrub a timeline or press *Replay* to watch the network hour by hour. KPIs count, rows re-rank in place, and bars glide. |
+| 🎯 **Backtest** | ShelfSense sees only data up to the replay hour, then its calls are scored against what actually happened (precision, recall, calibration). |
+| 🔍 **Shelf detail** | For any shelf, the projected stock until the truck drawn against what really happened, plus the recommended fix. |
 
 ## Why Exasol
 
-All the analytics are SQL views. Python only loads the data and draws the charts.
+All the analytics are SQL views. Python only loads the data and serves JSON.
 Each time the dashboard changes the replay moment, Exasol recomputes the whole pipeline over
 **1.3 M hourly rows**:
 
@@ -53,7 +54,9 @@ Each time the dashboard changes the replay moment, Exasol recomputes the whole p
    and falls back to an expedited case-pack order when no store can spare enough.
 5. **Backtest and lost sales** (`V_BACKTEST`, `V_LOST_SALES`). Predictions are joined against the future to score them.
 
-The dashboard shows Exasol's query time live. The full pipeline (scoring 1,325 shelves, rebalancing, backtest and lost sales) runs in **~6–7 s** on a laptop, with Exasol Personal in a Podman container on Windows.
+The dashboard shows Exasol's compute time live. The full pipeline (scoring 1,325 shelves, rebalancing, trajectories, backtest and lost sales) takes **~1.2 s** in 3 queries on a laptop, with Exasol Personal in a Podman container on Windows.
+
+**Latency budget.** Results stream over pyexasol's websocket `execute()` rather than `export_to_pandas`, which saved ~1 s of HTTP-tunnel setup per query. The local server caches each hour, the page prefetches neighbouring hours, and the hosted site preloads every hour in the background. Stepping or replaying therefore re-renders in **~20 ms**, and a cached hour is served in **~3 ms** locally.
 Because the logic lives in views, an analyst can query it directly from any SQL client:
 
 ```sql
@@ -77,7 +80,7 @@ UPDATE SHELFSENSE.APP_STATE SET AS_OF = '2026-10-20 18:00:00';  -- time-travel: 
 | Calibration | Shelves given 85–100 % risk ran out 96 % of the time; shelves given 0–10 % ran out 4 % of the time |
 | Lost-sales estimate vs ground truth | 12.2 k vs 17.0 k units (−28 %): conservative, because it uses expected rather than peak demand |
 
-Live snapshot: **https://shelfsense-exathon.vercel.app** (static export of the dashboard, see `export_site.py`)
+Live site: **https://shelfsense-exathon.vercel.app**. It replays 96 pre-computed hours (22–25 Oct) exported by `export_site.py`. Run `server.py` locally for every hour, computed live.
 
 ## Architecture
 
@@ -86,7 +89,10 @@ generate_data.py ──CSV──▶ load.py ──IMPORT──▶ Exasol Persona
                                                  │ tables: STORES, SKUS, SALES_HOURLY, RECEIPTS
                                                  │ views : V_HOURLY → V_SHAPE → V_RATE → V_FORECAST
                                                  │         → V_RISK → V_ACTIONS → V_BACKTEST, V_LOST_SALES
-app/app.py (Streamlit) ◀──── pyexasol ───────────┘
+                         shelfsense_db.snapshot()◀┘ 3 queries per hour → JSON
+                           ├── server.py      local: any hour, live, cached in memory
+                           └── export_site.py site/snap/*.json → Vercel (static)
+site/index.html  one dependency-free page for both, served at /snap/<YYYYMMDDHH>.json
 ```
 
 ## Setup and run
@@ -106,7 +112,10 @@ git clone https://github.com/andringodson/shelfsense && cd shelfsense
 pip install -r requirements.txt
 python generate_data.py       # ~7 s, writes data/ (1.3 M rows, deterministic seed)
 python load.py                # creates schema SHELFSENSE, bulk-loads, builds views
-streamlit run app/app.py      # http://localhost:8501
+python server.py              # http://localhost:8000: the dashboard, every hour live from Exasol
+
+python export_site.py         # optional: pre-compute 22–25 Oct into site/snap/ for static hosting
+cd site && vercel deploy      # optional: the static site needs no database
 ```
 
 If your deployment differs from the defaults, set `EXA_DSN`, `EXA_USER` and `EXA_PASSWORD` (values from `exasol info`).
@@ -129,11 +138,12 @@ If your deployment differs from the defaults, set `EXA_DSN`, `EXA_USER` and `EXA
 | [Exasol Personal](https://www.exasol.com/personal) | Database: all analytics | Free personal edition |
 | [Podman](https://podman.io) | Container runtime Exasol uses locally | Apache 2.0 |
 | [pyexasol](https://github.com/exasol/pyexasol) | Python driver, bulk import and export | MIT |
-| [Streamlit](https://streamlit.io) | Dashboard | Apache 2.0 |
-| [pandas](https://pandas.pydata.org), [NumPy](https://numpy.org) | Data generation, display | BSD-3 |
+| [NumPy](https://numpy.org) | Synthetic data generation | BSD-3 |
+| [Inter](https://rsms.me/inter/), [Instrument Serif](https://fonts.google.com/specimen/Instrument+Serif) via Google Fonts | Dashboard typography | OFL 1.1 |
+| [Vercel](https://vercel.com) | Static hosting of the snapshot site | n/a |
 | Claude (Anthropic) | AI coding assistant during development | n/a |
 
-No external APIs are called at runtime.
+No external APIs are called at runtime. The dashboard is plain HTML, CSS and JavaScript with no frameworks.
 
 ## Team
 
