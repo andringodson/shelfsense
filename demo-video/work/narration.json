@@ -1,0 +1,52 @@
+[
+ {
+  "id": "intro",
+  "text": "Hi! This is ShelfSense, our entry for ExaThon India, track two. It's an early-warning system for empty shelves in quick-commerce dark stores... and every number you'll see is computed inside Exasol Personal.",
+  "slot": 99
+ },
+ {
+  "id": "problem",
+  "text": "In ten-minute delivery, an empty shelf is a lost order. The customer simply opens another app. But your sales data can't see it. An empty shelf just looks like a quiet hour. Forecasts learn from those zeros, the next order gets smaller... and it happens again.",
+  "slot": 99
+ },
+ {
+  "id": "overview",
+  "text": "This is the live dashboard, connected to Exasol right here on my laptop. It's Saturday, eight in the morning. Two shelves are already empty. A hundred and seventy-three will run out before tomorrow's six a.m. truck... and about one point two lakh rupees is at risk.",
+  "slot": 99
+ },
+ {
+  "id": "replay",
+  "text": "Press replay, and Exasol re-scores all thirteen hundred shelves, hour after hour. Watch the board re-rank itself as the morning rush drains the shelves.",
+  "slot": 99
+ },
+ {
+  "id": "live",
+  "text": "I can jump anywhere in six weeks of history. Exasol computes that moment from one point three million rows in about a second. After that it's cached, so going back is instant.",
+  "slot": 99
+ },
+ {
+  "id": "actions",
+  "text": "For every shelf, ShelfSense tells you what to do. If a store nearby, in the same city, has stock to spare, move it across. If not, expedite an order, rounded up to full cases. And here's this shelf's forecast, drawn against what actually happened.",
+  "slot": 99
+ },
+ {
+  "id": "lost",
+  "text": "Further down is the money already lost to empty shelves over the last two weeks... the number no sales report shows you. And because we can replay history, every single call is backtested. When ShelfSense is sure a shelf will run out, it almost always does.",
+  "slot": 99
+ },
+ {
+  "id": "sql",
+  "text": "Under the hood, it's all SQL views in Exasol. A demand model that ignores the misleading zeros, a forty-eight hour forecast, Poisson risk, and same-city rebalancing. Any analyst can query it straight from a SQL client.",
+  "slot": 99
+ },
+ {
+  "id": "dark",
+  "text": "It's just as comfortable at night... and the hosted version is live on Vercel for anyone to try.",
+  "slot": 99
+ },
+ {
+  "id": "outro",
+  "text": "ShelfSense. Catch the empty shelf... before your customer does. Thank you!",
+  "slot": 99
+ }
+]

@@ -92,7 +92,7 @@ if os.path.exists("narration.json") and os.path.exists("vo/l0.wav"):
     voice /= np.abs(voice).max()
     # smoothed voice envelope -> ~7 dB duck on the music while she speaks
     env = np.abs(voice); win = int(0.25 * SR)
-    env = np.convolve(env, np.ones(win) / win, mode="same"); env = np.minimum(env / (env.max() * 0.35), 1)
+    c = np.concatenate([[0], np.cumsum(env)]); env = (c[win:] - c[:-win]) / win; env = np.pad(env, (win // 2, len(t) - len(env) - win // 2))  # O(n) moving average; env = np.minimum(env / (env.max() * 0.35), 1)
     music *= 1 - 0.55 * env
 mix = music * 0.55 + np.stack([voice, voice]) * 0.9
 mix = np.tanh(mix * 1.1) / np.tanh(1.1)

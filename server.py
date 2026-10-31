@@ -15,6 +15,8 @@ from datetime import datetime, timedelta
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 
+import pyexasol
+
 from load import DEFAULT_AS_OF
 from shelfsense_db import connect, snapshot
 
@@ -39,8 +41,13 @@ def live_snapshot(key):
         return cache[key]
     with lock:  # one connection, and APP_STATE is shared: compute one hour at a time
         if key not in cache:
+            global conn
             t = time.perf_counter()
-            d = snapshot(conn, key_to_ts(key))
+            try:
+                d = snapshot(conn, key_to_ts(key))
+            except pyexasol.ExaCommunicationError:  # Exasol dropped the socket: reconnect once and retry
+                conn = connect()
+                d = snapshot(conn, key_to_ts(key))
             d["ms"] = round((time.perf_counter() - t) * 1000)
             cache[key] = json.dumps(d).encode()
             os.makedirs(CACHE, exist_ok=True)
@@ -57,7 +64,10 @@ def warm():
     for ts in sorted(hours, key=lambda h: abs(h - d0)):
         while waiting:
             time.sleep(0.05)
-        live_snapshot(ts.strftime("%Y%m%d%H"))
+        try:
+            live_snapshot(ts.strftime("%Y%m%d%H"))
+        except Exception as e:  # one bad hour must not stop the warmer
+            print(f"warm: {ts:%Y-%m-%d %H}:00 failed ({type(e).__name__}), skipping")
     print(f"warm: all {len(hours)} hours cached")
 
 
@@ -112,5 +122,6 @@ class DualStackServer(ThreadingHTTPServer):
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     print(f"ShelfSense on http://localhost:{port}")
-    threading.Thread(target=warm, daemon=True).start()
+    if os.environ.get("SHELFSENSE_WARM", "1") == "1":  # 0 = compute hours only on demand (e.g. to demo a live compute)
+        threading.Thread(target=warm, daemon=True).start()
     DualStackServer(("::", port), partial(Handler, directory=SITE)).serve_forever()

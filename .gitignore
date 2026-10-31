@@ -11,3 +11,10 @@ brag-output/work/*.jpg
 brag-output/work/*.png
 brag-output/work/*.txt
 brag-output/work/capture.json
+demo-video/work/frames/
+demo-video/work/stills/
+demo-video/work/*.mp4
+demo-video/work/*.wav
+demo-video/work/*.jpg
+demo-video/work/*.txt
+demo-video/work/capture.json

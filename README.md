@@ -9,7 +9,7 @@ Stock-out early warning for quick-commerce dark stores, computed entirely in SQL
 
 <p align="center">
   <a href="https://shelfsense-exathon.vercel.app"><img alt="Live demo" src="https://img.shields.io/badge/Live_demo-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white"></a>
-  <a href="https://shelfsense-exathon.vercel.app/demo.mp4"><img alt="Demo video" src="https://img.shields.io/badge/Demo_video-35s-0F5C43?style=for-the-badge&logo=youtube&logoColor=white"></a>
+  <a href="https://shelfsense-exathon.vercel.app/demo.mp4"><img alt="Demo video" src="https://img.shields.io/badge/Demo_video-2%3A21_with_voice-0F5C43?style=for-the-badge&logo=youtube&logoColor=white"></a>
   <a href="https://shelfsense-exathon.vercel.app/pitch.pdf"><img alt="Pitch deck PDF" src="https://img.shields.io/badge/Pitch_deck-PDF-C96A0A?style=for-the-badge&logo=adobeacrobatreader&logoColor=white"></a>
   <a href="https://github.com/andringodson/shelfsense/raw/main/docs/ShelfSense-pitch.pptx"><img alt="Pitch deck PPTX" src="https://img.shields.io/badge/Pitch_deck-PPTX-B7472A?style=for-the-badge&logo=microsoftpowerpoint&logoColor=white"></a>
 </p>
@@ -23,10 +23,10 @@ Stock-out early warning for quick-commerce dark stores, computed entirely in SQL
 
 <p align="center">
   <a href="https://shelfsense-exathon.vercel.app/demo.mp4"><img src="docs/demo.gif" width="860" alt="ShelfSense replaying a Saturday: KPIs count, the action board re-ranks live"></a><br>
-  <sub>▶ Click for the full 35-second demo video · <a href="https://shelfsense-exathon.vercel.app">try it live</a></sub>
+  <sub>▶ Click for the full 2-minute voiced walkthrough · <a href="https://shelfsense-exathon.vercel.app">try it live</a></sub>
 </p>
 
-**Quick links:** [🌐 Live dashboard](https://shelfsense-exathon.vercel.app) · [📹 Demo video](https://shelfsense-exathon.vercel.app/demo.mp4) · [📊 Deck (PDF)](https://shelfsense-exathon.vercel.app/pitch.pdf) · [📎 Deck (PPTX)](https://github.com/andringodson/shelfsense/raw/main/docs/ShelfSense-pitch.pptx) · [⚙️ Setup](#setup-and-run) · [🧠 How it works](#why-exasol) · [📈 Results](#results-simulated-network-replay-at-sat-24-oct-2026-0800)
+**Quick links:** [🌐 Live dashboard](https://shelfsense-exathon.vercel.app) · [📹 Demo video (2:21)](https://shelfsense-exathon.vercel.app/demo.mp4) · [🎬 35 s teaser](https://shelfsense-exathon.vercel.app/teaser.mp4) · [📊 Deck (PDF)](https://shelfsense-exathon.vercel.app/pitch.pdf) · [📎 Deck (PPTX)](https://github.com/andringodson/shelfsense/raw/main/docs/ShelfSense-pitch.pptx) · [⚙️ Setup](#setup-and-run) · [🧠 How it works](#why-exasol) · [📈 Results](#results-simulated-network-replay-at-sat-24-oct-2026-0800)
 
 ---
 
@@ -180,6 +180,7 @@ No external APIs are called at runtime. The dashboard is plain HTML, CSS and Jav
 
 | | |
 |---|---|
-| 📹 **Demo video** (35 s, captured from the real dashboard) | [Watch in browser](https://shelfsense-exathon.vercel.app/demo.mp4) · [file in repo](brag-output/brag.mp4) |
+| 📹 **Demo walkthrough** (2:21, voiced, recorded live against Exasol) | [Watch in browser](https://shelfsense-exathon.vercel.app/demo.mp4) · [file in repo](demo-video/ShelfSense-demo.mp4) |
+| 🎬 **Launch teaser** (35 s, voiced) | [Watch in browser](https://shelfsense-exathon.vercel.app/teaser.mp4) · [file in repo](brag-output/brag.mp4) |
 | 📊 **Pitch deck** | [PDF in browser](https://shelfsense-exathon.vercel.app/pitch.pdf) · [PDF](docs/ShelfSense-pitch.pdf) · [PPTX](docs/ShelfSense-pitch.pptx) |
 | 🌐 **Live dashboard** | [shelfsense-exathon.vercel.app](https://shelfsense-exathon.vercel.app) |
