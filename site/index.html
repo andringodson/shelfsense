@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ShelfSense</title>
+<meta name="description" content="Stock-out early warning for quick-commerce dark stores, computed in Exasol Personal. ExaThon India 2026, Track 02.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛒</text></svg>">
+<style>
+:root { --bg:#fafaf7; --card:#fff; --ink:#1b1d1f; --mute:#6b7075; --line:#e6e6e0; --acc:#0f7b5f;
+        --out:#b42318; --crit:#d9480f; --risk:#b7791f; --bar:#0f7b5f22; }
+@media (prefers-color-scheme: dark) { :root { --bg:#111315; --card:#1a1d20; --ink:#ecedee; --mute:#9aa0a6;
+        --line:#2b2f33; --acc:#3fcf9e; --out:#ff6b5e; --crit:#ff8c42; --risk:#f2c14e; --bar:#3fcf9e22; } }
+* { box-sizing:border-box }
+body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif }
+main { max-width:1180px; margin:0 auto; padding:32px 16px 64px }
+h1 { font-size:30px; margin:0 } h2 { font-size:19px; margin:40px 0 12px }
+.sub { color:var(--mute); margin:4px 0 0 } a { color:var(--acc) }
+.kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:12px; margin-top:24px }
+.kpi { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px }
+.kpi b { display:block; font-size:28px; font-variant-numeric:tabular-nums } .kpi span { color:var(--mute); font-size:13px }
+.note { color:var(--mute); font-size:13px; margin-top:8px }
+.wrap { overflow-x:auto; background:var(--card); border:1px solid var(--line); border-radius:12px }
+table { border-collapse:collapse; width:100%; font-size:13.5px }
+th, td { padding:8px 10px; border-bottom:1px solid var(--line); text-align:left; white-space:nowrap }
+th { color:var(--mute); font-weight:600; position:sticky; top:0; background:var(--card) }
+td.n { text-align:right; font-variant-numeric:tabular-nums }
+.tag { font-weight:700; font-size:12px } .OUT { color:var(--out) } .CRITICAL { color:var(--crit) } .AT { color:var(--risk) }
+.bars div { display:grid; grid-template-columns:130px 1fr 110px; gap:10px; align-items:center; margin:6px 0; font-size:13.5px }
+.bars i { display:block; height:14px; background:var(--acc); border-radius:3px }
+.bars em { font-style:normal; text-align:right; font-variant-numeric:tabular-nums }
+.grid2 { display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:24px }
+.card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px }
+.filters { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px }
+select { font:inherit; padding:6px 8px; border-radius:8px; border:1px solid var(--line); background:var(--card); color:var(--ink) }
+code { font-size:13px }
+</style>
+</head>
+<body>
+<main>
+  <h1>🛒 ShelfSense</h1>
+  <p class="sub">Stock-out early warning for quick-commerce dark stores, computed entirely in SQL inside Exasol Personal.
+     ExaThon India 2026 · Track 02 · <a href="https://github.com/andringodson/shelfsense">Source on GitHub</a></p>
+  <p class="note" id="asof"></p>
+
+  <div class="kpis" id="kpis"></div>
+
+  <h2>🚨 Action board: what will run out before tomorrow's 06:00 truck</h2>
+  <div class="filters"><select id="fcity"><option value="">All cities</option></select>
+    <select id="fstatus"><option value="">All statuses</option><option>OUT</option><option>CRITICAL</option><option>AT RISK</option></select></div>
+  <div class="wrap" style="max-height:520px"><table id="act"></table></div>
+  <p class="note" id="actnote"></p>
+
+  <div class="grid2">
+    <div><h2>📉 Lost revenue, last 14 days</h2>
+      <div class="card bars" id="lostcat"></div>
+      <p class="note" id="valid"></p></div>
+    <div><h2>🎯 Backtest: were the calls right?</h2>
+      <div class="card"><div class="kpis" id="bt" style="margin-top:0;grid-template-columns:repeat(auto-fit,minmax(120px,1fr))"></div>
+        <p class="note">Calibration: of the shelves given each predicted risk, the share that actually ran out.</p>
+        <div class="bars" id="cal"></div></div></div>
+  </div>
+
+  <p class="note" style="margin-top:40px">This page is a frozen snapshot exported from the live app (<code>python export_site.py</code>).
+    The interactive dashboard, with replay at any hour, runs locally against Exasol: see the README. All data is synthetic.</p>
+</main>
+<script>
+const inr = x => "₹" + Math.round(x).toLocaleString("en-IN");
+const pct = x => Math.round(x * 100) + "%";
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const kpi = (v, l) => `<div class="kpi"><b>${v}</b><span>${l}</span></div>`;
+const bars = (rows, max, fmt) => rows.map(([k, v]) =>
+  `<div><span>${esc(k)}</span><i style="width:${Math.max(v / max * 100, 0.5)}%"></i><em>${fmt(v)}</em></div>`).join("");
+
+fetch("snapshot.json").then(r => r.json()).then(d => {
+  document.getElementById("asof").textContent =
+    `Snapshot as of ${d.as_of} · next truck in ${d.truck_h} h · ${d.shelves.toLocaleString()} shelves scored over 1.3 M hourly rows in ${(d.ms / 1000).toFixed(1)} s of Exasol time`;
+  document.getElementById("kpis").innerHTML = kpi(d.kpi.out, "Shelves empty now") +
+    kpi(d.kpi.at_risk, "Will empty before the truck") + kpi(inr(d.kpi.revenue_at_risk), "Revenue at risk before truck") +
+    kpi(inr(d.kpi.lost_14d), "Already lost, last 14 days");
+
+  const city = document.getElementById("fcity"), status = document.getElementById("fstatus");
+  [...new Set(d.actions.map(a => a.CITY))].sort().forEach(c => city.add(new Option(c, c)));
+  const draw = () => {
+    const rows = d.actions.filter(a => (!city.value || a.CITY === city.value) && (!status.value || a.RISK_STATUS === status.value));
+    document.getElementById("act").innerHTML =
+      "<thead><tr><th>Status</th><th>Store</th><th>Product</th><th>On shelf</th><th>Demand to truck</th><th>Empty in</th><th>Risk</th><th>₹ at risk</th><th>Do this now</th></tr></thead><tbody>" +
+      rows.map(a => `<tr><td class="tag ${a.RISK_STATUS.split(" ")[0]}">${a.RISK_STATUS}</td>
+        <td>${a.STORE_ID} · ${esc(a.AREA)}, ${esc(a.CITY)}</td><td>${esc(a.SKU_NAME)}</td>
+        <td class="n">${a.STOCK}</td><td class="n">${a.DEMAND_TO_TRUCK.toFixed(1)}</td>
+        <td class="n">${a.HOURS_TO_OOS == null ? "—" : a.HOURS_TO_OOS + " h"}</td><td class="n">${pct(a.RISK_PROB)}</td>
+        <td class="n">${inr(a.REVENUE_AT_RISK)}</td><td>${esc(a.RECOMMENDATION)}</td></tr>`).join("") + "</tbody>";
+  };
+  city.onchange = status.onchange = draw; draw();
+  document.getElementById("actnote").textContent =
+    `${d.kpi.transfers} of ${d.actions.length} shortfalls are fixed by moving stock between stores in the same city. The rest need an expedited order.`;
+
+  const cats = Object.entries(d.lost_by_category);
+  document.getElementById("lostcat").innerHTML = bars(cats, cats[0][1], inr);
+  const v = d.validation;
+  document.getElementById("valid").textContent = `Checked against simulator ground truth: estimated ${Math.round(v.estimated).toLocaleString()} lost units vs ${v.actual.toLocaleString()} actual (${((v.estimated - v.actual) / v.actual * 100).toFixed(0)}%). The estimate is deliberately conservative.`;
+
+  document.getElementById("bt").innerHTML = kpi(d.backtest.actual, "Stock-outs that happened") +
+    kpi(pct(d.backtest.recall), "Caught in advance") + kpi(pct(d.backtest.precision), "Alerts that were right");
+  document.getElementById("cal").innerHTML = bars(d.backtest.calibration.map(c => [`${c.bin} (${c.n})`, c.rate]), 1, pct);
+});
+</script>
+</body>
+</html>
