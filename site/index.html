@@ -4,106 +4,542 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ShelfSense</title>
-<meta name="description" content="Stock-out early warning for quick-commerce dark stores, computed in Exasol Personal. ExaThon India 2026, Track 02.">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛒</text></svg>">
+<meta name="description" content="Stock-out early warning for quick-commerce dark stores, computed in SQL inside Exasol Personal. ExaThon India 2026, Track 02.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%230F5C43'/><path d='M8 11h16M8 16h16M8 21h10' stroke='white' stroke-width='2.5' stroke-linecap='round'/><circle cx='23' cy='21' r='2.5' fill='%23F2A541'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Instrument+Serif&display=swap" rel="stylesheet">
 <style>
-:root { --bg:#fafaf7; --card:#fff; --ink:#1b1d1f; --mute:#6b7075; --line:#e6e6e0; --acc:#0f7b5f;
-        --out:#b42318; --crit:#d9480f; --risk:#b7791f; --bar:#0f7b5f22; }
-@media (prefers-color-scheme: dark) { :root { --bg:#111315; --card:#1a1d20; --ink:#ecedee; --mute:#9aa0a6;
-        --line:#2b2f33; --acc:#3fcf9e; --out:#ff6b5e; --crit:#ff8c42; --risk:#f2c14e; --bar:#3fcf9e22; } }
+:root {
+  --bg:#F8F9F7; --surface:#FFFFFF; --sunken:#F1F3F0; --ink:#111614; --muted:#5E6763; --faint:#8C9590; --line:#E5E8E4;
+  --brand:#0F5C43; --brand-soft:#E3F1EA; --accent:#C96A0A; --accent-soft:#FBEEDD;
+  --out:#C2372A; --out-soft:#FBE5E2; --crit:#C96A0A; --crit-soft:#FBEEDD; --risk:#8A6D0B; --risk-soft:#F6F0D6;
+  --shadow:0 1px 2px rgb(17 22 20 / .04), 0 4px 16px rgb(17 22 20 / .05);
+  --ease-out:cubic-bezier(.23,1,.32,1); --ease-in-out:cubic-bezier(.77,0,.175,1);
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg:#0B0E0D; --surface:#131816; --sunken:#0F1312; --ink:#ECF0EE; --muted:#97A19C; --faint:#6C7671; --line:#222927;
+  --brand:#4CC79A; --brand-soft:#16302A; --accent:#F2A541; --accent-soft:#33260F;
+  --out:#FF7A6B; --out-soft:#3A1915; --crit:#F2A541; --crit-soft:#33260F; --risk:#E4C65A; --risk-soft:#2E2A12;
+  --shadow:0 1px 2px rgb(0 0 0 / .3), 0 8px 24px rgb(0 0 0 / .25); color-scheme:dark; } }
+:root[data-theme="dark"] {
+  --bg:#0B0E0D; --surface:#131816; --sunken:#0F1312; --ink:#ECF0EE; --muted:#97A19C; --faint:#6C7671; --line:#222927;
+  --brand:#4CC79A; --brand-soft:#16302A; --accent:#F2A541; --accent-soft:#33260F;
+  --out:#FF7A6B; --out-soft:#3A1915; --crit:#F2A541; --crit-soft:#33260F; --risk:#E4C65A; --risk-soft:#2E2A12;
+  --shadow:0 1px 2px rgb(0 0 0 / .3), 0 8px 24px rgb(0 0 0 / .25); color-scheme:dark; }
+
 * { box-sizing:border-box }
-body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif }
-main { max-width:1180px; margin:0 auto; padding:32px 16px 64px }
-h1 { font-size:30px; margin:0 } h2 { font-size:19px; margin:40px 0 12px }
-.sub { color:var(--mute); margin:4px 0 0 } a { color:var(--acc) }
-.kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:12px; margin-top:24px }
-.kpi { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px }
-.kpi b { display:block; font-size:28px; font-variant-numeric:tabular-nums } .kpi span { color:var(--mute); font-size:13px }
-.note { color:var(--mute); font-size:13px; margin-top:8px }
-.wrap { overflow-x:auto; background:var(--card); border:1px solid var(--line); border-radius:12px }
-table { border-collapse:collapse; width:100%; font-size:13.5px }
-th, td { padding:8px 10px; border-bottom:1px solid var(--line); text-align:left; white-space:nowrap }
-th { color:var(--mute); font-weight:600; position:sticky; top:0; background:var(--card) }
-td.n { text-align:right; font-variant-numeric:tabular-nums }
-.tag { font-weight:700; font-size:12px } .OUT { color:var(--out) } .CRITICAL { color:var(--crit) } .AT { color:var(--risk) }
-.bars div { display:grid; grid-template-columns:130px 1fr 110px; gap:10px; align-items:center; margin:6px 0; font-size:13.5px }
-.bars i { display:block; height:14px; background:var(--acc); border-radius:3px }
-.bars em { font-style:normal; text-align:right; font-variant-numeric:tabular-nums }
-.grid2 { display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:24px }
-.card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px }
-.filters { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px }
-select { font:inherit; padding:6px 8px; border-radius:8px; border:1px solid var(--line); background:var(--card); color:var(--ink) }
-code { font-size:13px }
+html { -webkit-text-size-adjust:100% }
+body { margin:0; background:var(--bg); color:var(--ink); font:14px/1.5 Inter,system-ui,-apple-system,"Segoe UI",sans-serif;
+       font-feature-settings:"cv11","ss01"; -webkit-font-smoothing:antialiased }
+.num { font-variant-numeric:tabular-nums }
+a { color:inherit }
+button { font:inherit; color:inherit; cursor:pointer }
+.wrap { max-width:1240px; margin:0 auto; padding:0 24px }
+
+/* top bar */
+.top { position:sticky; top:0; z-index:5; background:color-mix(in srgb, var(--bg) 82%, transparent);
+       backdrop-filter:saturate(1.4) blur(12px); -webkit-backdrop-filter:saturate(1.4) blur(12px); border-bottom:1px solid var(--line) }
+.top .wrap { display:flex; align-items:center; gap:16px; height:60px }
+.brand { display:flex; align-items:center; gap:10px; font-weight:600; font-size:15px; letter-spacing:-.01em; text-decoration:none }
+.brand small { color:var(--muted); font-weight:400; font-size:13px }
+.spacer { flex:1 }
+.pill { display:inline-flex; align-items:center; gap:6px; height:28px; padding:0 10px; border-radius:99px; border:1px solid var(--line);
+        background:var(--surface); font-size:12.5px; color:var(--muted); white-space:nowrap }
+.pill i { width:7px; height:7px; border-radius:50%; background:var(--brand); box-shadow:0 0 0 3px var(--brand-soft) }
+.pill.snap i { background:var(--faint); box-shadow:none }
+.icon-btn { display:grid; place-items:center; width:34px; height:34px; border-radius:9px; border:1px solid var(--line); background:var(--surface);
+            transition:transform 160ms var(--ease-out), background-color 160ms ease }
+.icon-btn:active, .seg button:active, .play:active, .more:active { transform:scale(.97) }
+@media (hover:hover) and (pointer:fine) { .icon-btn:hover, .more:hover { background:var(--sunken) } }
+:focus-visible { outline:2px solid var(--brand); outline-offset:2px }
+
+/* replay hero */
+.hero { padding:40px 0 8px; display:grid; grid-template-columns:1fr auto; gap:24px; align-items:end }
+.eyebrow { font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); font-weight:600 }
+.when { font-family:"Instrument Serif",Georgia,serif; font-weight:400; font-size:clamp(34px,5vw,52px); line-height:1.05; letter-spacing:-.01em; margin:6px 0 6px }
+.when em { font-style:normal; color:var(--muted) }
+.sub { color:var(--muted); margin:0 }
+.sub b { color:var(--ink); font-weight:500 }
+.engine { text-align:right; color:var(--muted); font-size:12.5px }
+.engine b { display:block; color:var(--ink); font-size:20px; font-weight:500; letter-spacing:-.01em }
+
+.timeline { margin:24px 0 8px; display:grid; grid-template-columns:auto 1fr; gap:16px; align-items:center }
+.controls { display:flex; gap:6px }
+.play { display:inline-flex; align-items:center; gap:8px; height:34px; padding:0 14px 0 12px; border-radius:9px; border:0;
+        background:var(--ink); color:var(--bg); font-weight:500; transition:transform 160ms var(--ease-out) }
+.track { position:relative; padding:4px 0 22px }
+input[type=range] { -webkit-appearance:none; appearance:none; width:100%; height:34px; margin:0; background:transparent; cursor:pointer }
+input[type=range]::-webkit-slider-runnable-track { height:4px; border-radius:4px; background:linear-gradient(to right, var(--brand) var(--p,0%), var(--line) var(--p,0%)) }
+input[type=range]::-moz-range-track { height:4px; border-radius:4px; background:var(--line) }
+input[type=range]::-moz-range-progress { height:4px; border-radius:4px; background:var(--brand) }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:18px; height:18px; margin-top:-7px; border-radius:50%; background:var(--surface);
+  border:2px solid var(--brand); box-shadow:var(--shadow); transition:transform 160ms var(--ease-out) }
+input[type=range]::-moz-range-thumb { width:14px; height:14px; border-radius:50%; background:var(--surface); border:2px solid var(--brand) }
+input[type=range]:active::-webkit-slider-thumb { transform:scale(1.15) }
+.days { position:absolute; left:9px; right:9px; bottom:0; height:18px; font-size:11.5px; color:var(--faint) }
+.days span { position:absolute; transform:translateX(-50%); white-space:nowrap }
+.days span::before { content:""; position:absolute; left:50%; top:-9px; width:1px; height:5px; background:var(--line) }
+
+/* loading veil: blur masks the swap while Exasol computes a new hour */
+.stage { transition:filter 200ms ease, opacity 200ms ease }
+.stage.busy { filter:blur(1.5px); opacity:.6 }
+.bar-load { position:fixed; top:0; left:0; height:2px; width:100%; background:var(--brand); transform-origin:left;
+            transform:scaleX(0); opacity:0; z-index:9; transition:opacity 200ms ease }
+.bar-load.on { opacity:1; animation:load 1.4s var(--ease-out) forwards }
+@keyframes load { from { transform:scaleX(0) } to { transform:scaleX(.85) } }
+
+/* kpis */
+.kpis { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin:20px 0 }
+.kpi { background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:16px 18px; box-shadow:var(--shadow) }
+.kpi .label { color:var(--muted); font-size:12.5px }
+.kpi .value { font-size:30px; font-weight:500; letter-spacing:-.02em; margin-top:4px; line-height:1.15 }
+.kpi .delta { font-size:12px; color:var(--faint); height:18px; margin-top:2px; transition:opacity 200ms ease }
+.kpi .delta.up { color:var(--out) } .kpi .delta.down { color:var(--brand) }
+.kpi.hot .value { color:var(--accent) }
+
+/* layout */
+.grid { display:grid; grid-template-columns:minmax(0,1fr) 360px; gap:16px; align-items:start }
+.card { background:var(--surface); border:1px solid var(--line); border-radius:14px; box-shadow:var(--shadow) }
+.card-h { display:flex; align-items:center; gap:12px; padding:16px 18px 12px; flex-wrap:wrap }
+.card-h h2 { margin:0; font-size:15px; font-weight:600; letter-spacing:-.01em }
+.card-h p { margin:0; color:var(--muted); font-size:12.5px; width:100% }
+.seg { display:inline-flex; padding:3px; border-radius:10px; background:var(--sunken); border:1px solid var(--line) }
+.seg button { border:0; background:transparent; height:26px; padding:0 10px; border-radius:7px; font-size:12.5px; color:var(--muted);
+              transition:background-color 160ms ease, color 160ms ease, transform 160ms var(--ease-out) }
+.seg button[aria-pressed="true"] { background:var(--surface); color:var(--ink); box-shadow:0 1px 2px rgb(0 0 0 / .08) }
+select { height:32px; border-radius:9px; border:1px solid var(--line); background:var(--surface); color:var(--ink); padding:0 8px; font:inherit; font-size:12.5px }
+
+.table { max-height:620px; overflow:auto; border-top:1px solid var(--line); overscroll-behavior:contain }
+table { width:100%; border-collapse:separate; border-spacing:0 }
+th { position:sticky; top:0; z-index:1; background:var(--surface); text-align:left; font-weight:500; font-size:12px; color:var(--muted);
+     padding:10px 12px; border-bottom:1px solid var(--line); white-space:nowrap }
+td { padding:10px 12px; border-bottom:1px solid var(--line); vertical-align:middle; white-space:nowrap }
+th.r, td.r { text-align:right }
+tbody tr { cursor:pointer; transition:background-color 120ms ease }
+tbody tr.sel { background:var(--brand-soft) }
+@media (hover:hover) and (pointer:fine) { tbody tr:not(.sel):hover { background:var(--sunken) } }
+tbody tr.enter { animation:rowIn 260ms var(--ease-out) both }
+@keyframes rowIn { from { opacity:0; transform:translateY(4px) } }
+.prod { font-weight:500 }
+.store { color:var(--muted); font-size:12.5px }
+.tag { display:inline-flex; align-items:center; height:22px; padding:0 8px; border-radius:6px; font-size:11.5px; font-weight:600; letter-spacing:.02em }
+.tag.OUT { color:var(--out); background:var(--out-soft) } .tag.CRITICAL { color:var(--crit); background:var(--crit-soft) }
+.tag.AT { color:var(--risk); background:var(--risk-soft) }
+.meter { display:inline-block; width:56px; height:6px; border-radius:6px; background:var(--sunken); overflow:hidden; vertical-align:middle; margin-right:8px }
+.meter b { display:block; height:100%; width:100%; border-radius:6px; background:var(--accent); transform-origin:left;
+           transition:transform 280ms var(--ease-out) }
+.fix { color:var(--muted); font-size:12.5px; white-space:normal; min-width:170px; line-height:1.4 }
+.fix b { color:var(--ink); font-weight:500 }
+.more { display:block; width:calc(100% - 24px); margin:12px; height:34px; border-radius:9px; border:1px solid var(--line); background:var(--surface);
+        font-size:12.5px; color:var(--muted); transition:transform 160ms var(--ease-out), background-color 160ms ease }
+.empty { padding:48px 18px; text-align:center; color:var(--muted) }
+
+/* detail */
+.detail { position:sticky; top:76px; padding:18px }
+.detail h3 { margin:8px 0 0; font-size:18px; font-weight:600; letter-spacing:-.01em }
+.detail .store { margin-top:2px }
+.big { display:flex; align-items:baseline; gap:6px; margin:18px 0 2px }
+.big b { font-family:"Instrument Serif",Georgia,serif; font-weight:400; font-size:46px; line-height:1 }
+.big span { color:var(--muted) }
+.chart { margin:14px 0 6px; width:100% }
+.chart svg { display:block; width:100%; height:auto; overflow:visible }
+.legend { display:flex; gap:14px; font-size:12px; color:var(--muted) }
+.legend i { display:inline-block; width:14px; height:2px; vertical-align:middle; margin-right:6px; background:var(--accent) }
+.legend i.dash { background:repeating-linear-gradient(90deg, var(--accent) 0 4px, transparent 4px 7px) }
+.legend i.act { background:var(--ink) }
+.facts { display:grid; grid-template-columns:1fr 1fr; gap:1px; margin:16px 0; background:var(--line); border:1px solid var(--line); border-radius:10px; overflow:hidden }
+.facts div { background:var(--surface); padding:10px 12px }
+.facts span { display:block; color:var(--muted); font-size:12px }
+.facts b { font-weight:500; font-size:15px }
+.rec { display:flex; gap:10px; align-items:flex-start; padding:12px 14px; border-radius:10px; background:var(--accent-soft); color:var(--ink) }
+.rec.ok { background:var(--brand-soft) }
+.rec small { display:block; color:var(--muted) }
+
+/* lower */
+.lower { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin:16px 0 0 }
+.pad { padding:4px 18px 18px }
+.bars { display:grid; gap:10px }
+.bars .row { display:grid; grid-template-columns:110px 1fr 92px; gap:12px; align-items:center; font-size:13px }
+.bars .row span:first-child { color:var(--muted) }
+.bars .tr { height:8px; border-radius:8px; background:var(--sunken); overflow:hidden }
+.bars .tr b { display:block; height:100%; width:100%; border-radius:8px; background:var(--brand); transform-origin:left; transition:transform 320ms var(--ease-out) }
+.bars .tr.acc b { background:var(--accent) }
+.bars .row em { font-style:normal; text-align:right }
+.note { color:var(--muted); font-size:12.5px; margin:14px 0 0 }
+.duo { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:18px }
+.duo b { display:block; font-size:26px; font-weight:500; letter-spacing:-.02em }
+.duo span { color:var(--muted); font-size:12.5px }
+
+footer { color:var(--faint); font-size:12.5px; padding:40px 0 48px }
+footer a { color:var(--muted) }
+
+@media (max-width:1000px) { .grid { grid-template-columns:minmax(0,1fr) } .detail { position:static } .lower { grid-template-columns:1fr } }
+@media (max-width:720px) {
+  .wrap { padding:0 16px } .hero { grid-template-columns:1fr; padding-top:24px } .engine { text-align:left }
+  .kpis { grid-template-columns:1fr 1fr } .kpi .value { font-size:24px } .brand small, .hide-sm { display:none }
+  .timeline { grid-template-columns:1fr } .bars .row { grid-template-columns:90px 1fr 80px } }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration:1ms !important; transition-property:opacity, background-color, color, filter !important } }
 </style>
 </head>
 <body>
-<main>
-  <h1>🛒 ShelfSense</h1>
-  <p class="sub">Stock-out early warning for quick-commerce dark stores, computed entirely in SQL inside Exasol Personal.
-     ExaThon India 2026 · Track 02 · <a href="https://github.com/andringodson/shelfsense">Source on GitHub</a></p>
-  <p class="note" id="asof"></p>
+<div class="bar-load" id="load"></div>
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="./">
+      <svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="var(--brand)"/><path d="M8 11h16M8 16h16M8 21h10" stroke="var(--surface)" stroke-width="2.5" stroke-linecap="round"/><circle cx="23" cy="21" r="2.5" fill="var(--accent)"/></svg>
+      ShelfSense <small>Stock-out early warning</small>
+    </a>
+    <span class="spacer"></span>
+    <span class="pill" id="mode"><i></i><span>Connecting…</span></span>
+    <a class="icon-btn hide-sm" href="https://github.com/andringodson/shelfsense" aria-label="Source on GitHub" title="Source on GitHub">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38v-1.34c-2.23.48-2.7-1.07-2.7-1.07-.36-.92-.89-1.17-.89-1.17-.73-.5.06-.49.06-.49.8.06 1.23.83 1.23.83.72 1.22 1.87.87 2.33.66.07-.52.28-.87.5-1.07-1.78-.2-3.65-.89-3.65-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 0 1 4 0c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48v2.2c0 .21.15.46.55.38A8 8 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
+    </a>
+    <button class="icon-btn" id="theme" aria-label="Toggle colour theme" title="Toggle theme">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9Z"/></svg>
+    </button>
+  </div>
+</header>
 
-  <div class="kpis" id="kpis"></div>
+<main class="wrap">
+  <section class="hero">
+    <div>
+      <div class="eyebrow">Replaying the network as of</div>
+      <h1 class="when" id="when">&nbsp;</h1>
+      <p class="sub" id="truck">&nbsp;</p>
+    </div>
+    <div class="engine" id="engine"><b>&nbsp;</b>&nbsp;</div>
+  </section>
 
-  <h2>🚨 Action board: what will run out before tomorrow's 06:00 truck</h2>
-  <div class="filters"><select id="fcity"><option value="">All cities</option></select>
-    <select id="fstatus"><option value="">All statuses</option><option>OUT</option><option>CRITICAL</option><option>AT RISK</option></select></div>
-  <div class="wrap" style="max-height:520px"><table id="act"></table></div>
-  <p class="note" id="actnote"></p>
+  <section class="timeline" aria-label="Replay controls">
+    <div class="controls">
+      <button class="icon-btn" id="prev" aria-label="Previous hour" title="Previous hour (←)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
+      <button class="play" id="play" aria-pressed="false">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" id="playIcon"><path d="M7 4v16l13-8z"/></svg>
+        <span id="playLabel">Replay</span></button>
+      <button class="icon-btn" id="next" aria-label="Next hour" title="Next hour (→)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>
+    </div>
+    <div class="track"><input type="range" id="slider" min="0" max="0" value="0" aria-label="Replay hour"><div class="days" id="days"></div></div>
+  </section>
 
-  <div class="grid2">
-    <div><h2>📉 Lost revenue, last 14 days</h2>
-      <div class="card bars" id="lostcat"></div>
-      <p class="note" id="valid"></p></div>
-    <div><h2>🎯 Backtest: were the calls right?</h2>
-      <div class="card"><div class="kpis" id="bt" style="margin-top:0;grid-template-columns:repeat(auto-fit,minmax(120px,1fr))"></div>
-        <p class="note">Calibration: of the shelves given each predicted risk, the share that actually ran out.</p>
-        <div class="bars" id="cal"></div></div></div>
+  <div class="stage" id="stage">
+    <section class="kpis" aria-label="Network status">
+      <div class="kpi"><div class="label">Shelves empty now</div><div class="value num" data-k="out">–</div><div class="delta num" data-d="out"></div></div>
+      <div class="kpi"><div class="label">Will empty before the truck</div><div class="value num" data-k="at_risk">–</div><div class="delta num" data-d="at_risk"></div></div>
+      <div class="kpi hot"><div class="label">Revenue at risk before the truck</div><div class="value num" data-k="revenue_at_risk" data-inr>–</div><div class="delta num" data-d="revenue_at_risk" data-inr></div></div>
+      <div class="kpi"><div class="label">Already lost, last 14 days</div><div class="value num" data-k="lost_14d" data-inr>–</div><div class="delta num" data-d="lost_14d" data-inr></div></div>
+    </section>
+
+    <section class="grid">
+      <div class="card">
+        <div class="card-h">
+          <h2>Action board</h2>
+          <span class="spacer"></span>
+          <div class="seg" role="group" aria-label="Filter by status" id="seg">
+            <button aria-pressed="true" data-s="">All</button><button aria-pressed="false" data-s="OUT">Out</button>
+            <button aria-pressed="false" data-s="CRITICAL">Critical</button><button aria-pressed="false" data-s="AT RISK">At risk</button>
+          </div>
+          <select id="city" aria-label="Filter by city"><option value="">All cities</option></select>
+          <p id="boardNote">&nbsp;</p>
+        </div>
+        <div class="table" id="tableWrap">
+          <table>
+            <thead><tr><th>Status</th><th>Shelf</th><th class="r">On shelf</th><th class="r">Empty in</th><th>Risk</th><th class="r">₹ at risk</th><th>Do this now</th></tr></thead>
+            <tbody id="rows"></tbody>
+          </table>
+          <button class="more" id="more" hidden></button>
+        </div>
+      </div>
+
+      <aside class="card detail" id="detail" aria-live="polite"></aside>
+    </section>
+
+    <section class="lower">
+      <div class="card">
+        <div class="card-h"><h2>Lost revenue, last 14 days</h2>
+          <p>Sales data never shows a stock-out. An empty shelf looks like a quiet hour. This is the demand behind every empty-shelf hour.</p></div>
+        <div class="pad"><div class="bars" id="lost"></div><p class="note" id="valid"></p></div>
+      </div>
+      <div class="card">
+        <div class="card-h"><h2>Backtest</h2>
+          <p>ShelfSense only sees data up to the replay hour. Here its calls are scored against what actually happened next.</p></div>
+        <div class="pad" id="bt"></div>
+      </div>
+    </section>
   </div>
 
-  <p class="note" style="margin-top:40px">This page is a frozen snapshot exported from the live app (<code>python export_site.py</code>).
-    The interactive dashboard, with replay at any hour, runs locally against Exasol: see the README. All data is synthetic.</p>
+  <footer>
+    All data is synthetic, generated by <code>generate_data.py</code>. Every number on this page is computed by SQL views in Exasol Personal.
+    ExaThon India 2026 · Track 02 · Andrin Godson &amp; Karthikeyan · <a href="https://github.com/andringodson/shelfsense">GitHub</a> · MIT
+  </footer>
 </main>
+
 <script>
+const $ = s => document.querySelector(s);
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const inr = x => "₹" + Math.round(x).toLocaleString("en-IN");
 const pct = x => Math.round(x * 100) + "%";
-const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-const kpi = (v, l) => `<div class="kpi"><b>${v}</b><span>${l}</span></div>`;
-const bars = (rows, max, fmt) => rows.map(([k, v]) =>
-  `<div><span>${esc(k)}</span><i style="width:${Math.max(v / max * 100, 0.5)}%"></i><em>${fmt(v)}</em></div>`).join("");
+const fmtN = (x, money) => money ? inr(x) : Math.round(x).toLocaleString("en-IN");
 
-fetch("snapshot.json").then(r => r.json()).then(d => {
-  document.getElementById("asof").textContent =
-    `Snapshot as of ${d.as_of} · next truck in ${d.truck_h} h · ${d.shelves.toLocaleString()} shelves scored over 1.3 M hourly rows in ${(d.ms / 1000).toFixed(1)} s of Exasol time`;
-  document.getElementById("kpis").innerHTML = kpi(d.kpi.out, "Shelves empty now") +
-    kpi(d.kpi.at_risk, "Will empty before the truck") + kpi(inr(d.kpi.revenue_at_risk), "Revenue at risk before truck") +
-    kpi(inr(d.kpi.lost_14d), "Already lost, last 14 days");
+// hour keys are YYYYMMDDHH; do all date math in UTC so the viewer's time zone never shifts the data
+const toDate = k => new Date(Date.UTC(+k.slice(0, 4), +k.slice(4, 6) - 1, +k.slice(6, 8), +k.slice(8, 10)));
+const toKey = d => d.toISOString().slice(0, 13).replace(/[-T]/g, "");
+const addH = (k, h) => toKey(new Date(toDate(k).getTime() + h * 3600e3));
+const dayFmt = new Intl.DateTimeFormat("en-GB", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
+const shortFmt = new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
 
-  const city = document.getElementById("fcity"), status = document.getElementById("fstatus");
-  [...new Set(d.actions.map(a => a.CITY))].sort().forEach(c => city.add(new Option(c, c)));
-  const draw = () => {
-    const rows = d.actions.filter(a => (!city.value || a.CITY === city.value) && (!status.value || a.RISK_STATUS === status.value));
-    document.getElementById("act").innerHTML =
-      "<thead><tr><th>Status</th><th>Store</th><th>Product</th><th>On shelf</th><th>Demand to truck</th><th>Empty in</th><th>Risk</th><th>₹ at risk</th><th>Do this now</th></tr></thead><tbody>" +
-      rows.map(a => `<tr><td class="tag ${a.RISK_STATUS.split(" ")[0]}">${a.RISK_STATUS}</td>
-        <td>${a.STORE_ID} · ${esc(a.AREA)}, ${esc(a.CITY)}</td><td>${esc(a.SKU_NAME)}</td>
-        <td class="n">${a.STOCK}</td><td class="n">${a.DEMAND_TO_TRUCK.toFixed(1)}</td>
-        <td class="n">${a.HOURS_TO_OOS == null ? "—" : a.HOURS_TO_OOS + " h"}</td><td class="n">${pct(a.RISK_PROB)}</td>
-        <td class="n">${inr(a.REVENUE_AT_RISK)}</td><td>${esc(a.RECOMMENDATION)}</td></tr>`).join("") + "</tbody>";
+const state = { index: null, key: null, data: null, prev: null, status: "", city: "", sel: null, limit: 40, playing: false, timer: 0 };
+const cache = new Map();
+
+function load(key) {
+  if (!cache.has(key)) {
+    const t = performance.now();
+    cache.set(key, fetch(`snap/${key}.json`).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then(d => (d.fetchMs = performance.now() - t, d)).catch(e => { cache.delete(key); throw e; }));
+  }
+  return cache.get(key);
+}
+
+// ---------- number tween ----------
+function tween(el, to, money) {
+  const from = +(el.dataset.v ?? to);
+  el.dataset.v = to;
+  if (reduce || from === to) { el.textContent = fmtN(to, money); return; }
+  const t0 = performance.now(), dur = 320;
+  cancelAnimationFrame(el._raf);
+  const step = now => {
+    const p = Math.min((now - t0) / dur, 1), e = 1 - Math.pow(1 - p, 3);
+    el.textContent = fmtN(from + (to - from) * e, money);
+    if (p < 1) el._raf = requestAnimationFrame(step);
   };
-  city.onchange = status.onchange = draw; draw();
-  document.getElementById("actnote").textContent =
-    `${d.kpi.transfers} of ${d.actions.length} shortfalls are fixed by moving stock between stores in the same city. The rest need an expedited order.`;
+  el._raf = requestAnimationFrame(step);
+}
 
+// ---------- render ----------
+function renderHeader(d) {
+  const at = toDate(state.key);
+  $("#when").innerHTML = `${esc(dayFmt.format(at))} <em>${String(at.getUTCHours()).padStart(2, "0")}:00</em>`;
+  $("#truck").innerHTML = `Next delivery truck at <b>06:00</b>, in <b class="num">${d.truck_h} h</b> · ${d.shelves.toLocaleString()} shelves scored across 25 dark stores`;
+  const cached = d.fetchMs < 60 || !state.index.live;
+  $("#engine").innerHTML = state.index.live
+    ? `<b class="num">${(d.ms / 1000).toFixed(2)} s</b>computed live by Exasol${d.fetchMs < 60 ? " · now cached" : ""}`
+    : `<b class="num">${Math.max(1, Math.round(d.fetchMs))} ms</b>pre-computed by Exasol in ${(d.ms / 1000).toFixed(2)} s`;
+}
+
+function renderKpis(d, prev) {
+  document.querySelectorAll("[data-k]").forEach(el => tween(el, d.kpi[el.dataset.k], el.hasAttribute("data-inr")));
+  document.querySelectorAll("[data-d]").forEach(el => {
+    const k = el.dataset.d, diff = prev ? d.kpi[k] - prev.kpi[k] : 0;
+    el.className = "delta num" + (diff > 0 ? " up" : diff < 0 ? " down" : "");
+    el.textContent = !prev || !diff ? " " : `${diff > 0 ? "▲" : "▼"} ${fmtN(Math.abs(diff), el.hasAttribute("data-inr"))} vs last view`;
+  });
+}
+
+const rowKey = a => a.STORE_ID + a.SKU_ID;
+
+function renderRows(d) {
+  const tbody = $("#rows");
+  const list = d.actions.filter(a => (!state.status || a.RISK_STATUS === state.status) && (!state.city || a.CITY === state.city));
+  const shown = list.slice(0, state.limit);
+  // FLIP: remember where each keyed row was, re-render, then slide rows from old to new position
+  const before = new Map([...tbody.children].map(tr => [tr.dataset.key, tr.getBoundingClientRect().top]));
+  tbody.innerHTML = shown.map(a => {
+    const k = rowKey(a), [verb, ...rest] = (a.RECOMMENDATION || "Watch").split(" ");
+    return `<tr data-key="${k}" class="${k === state.sel ? "sel" : ""}${before.size && !before.has(k) ? " enter" : ""}">
+      <td><span class="tag ${a.RISK_STATUS.split(" ")[0]}">${a.RISK_STATUS}</span></td>
+      <td><div class="prod">${esc(a.SKU_NAME)}</div><div class="store">${a.STORE_ID} · ${esc(a.AREA)}, ${esc(a.CITY)}</div></td>
+      <td class="r num">${a.STOCK}</td>
+      <td class="r num">${a.STOCK === 0 ? "now" : a.HOURS_TO_OOS == null ? "—" : a.HOURS_TO_OOS + " h"}</td>
+      <td class="num"><span class="meter"><b style="transform:scaleX(${a.RISK_PROB})"></b></span>${pct(a.RISK_PROB)}</td>
+      <td class="r num">${inr(a.REVENUE_AT_RISK)}</td>
+      <td class="fix"><b>${esc(verb)}</b> ${esc(rest.join(" "))}</td></tr>`;
+  }).join("");
+  if (!shown.length) tbody.innerHTML = `<tr><td colspan="7" class="empty">Nothing at risk for this filter. Every shelf can make it to the truck.</td></tr>`;
+  if (!reduce && before.size) {
+    for (const tr of tbody.children) {
+      const old = before.get(tr.dataset.key);
+      if (old == null) continue;
+      const dy = old - tr.getBoundingClientRect().top;
+      if (Math.abs(dy) > 1) tr.animate([{ transform: `translateY(${dy}px)` }, { transform: "none" }],
+        { duration: 300, easing: "cubic-bezier(.77,0,.175,1)" });
+    }
+  }
+  const more = $("#more");
+  more.hidden = list.length <= state.limit;
+  more.textContent = `Show all ${list.length} shelves`;
+  $("#boardNote").textContent = `${list.length} shelves need attention. ${d.kpi.transfers} can be fixed by moving stock between stores in the same city, and the rest need an expedited order. Ranked by revenue at risk.`;
+}
+
+function chart(a, truckH) {
+  const proj = [a.STOCK, ...a.PROJ], act = a.ACTUAL.every(v => v != null) ? [a.STOCK, ...a.ACTUAL] : null;
+  const W = 320, H = 150, L = 28, B = 22, n = Math.max(proj.length - 1, 1);
+  const max = Math.max(1, ...proj, ...(act || [])) * 1.1;
+  const x = i => L + (i / n) * (W - L - 6), y = v => 8 + (1 - v / max) * (H - B - 8);
+  const path = s => s.map((v, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join("");
+  const ticks = [0, Math.round(max / 1.1 / 2), Math.round(max / 1.1)];
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Projected and actual shelf stock until the truck">
+    ${ticks.map(t => `<line x1="${L}" x2="${W - 6}" y1="${y(t)}" y2="${y(t)}" stroke="var(--line)"/><text x="${L - 6}" y="${y(t) + 4}" text-anchor="end" font-size="10" fill="var(--faint)">${t}</text>`).join("")}
+    <text x="${L}" y="${H - 4}" font-size="10" fill="var(--faint)">now</text>
+    <text x="${W - 6}" y="${H - 4}" font-size="10" fill="var(--faint)" text-anchor="end">truck · ${truckH} h</text>
+    ${act ? `<path d="${path(act)}" fill="none" stroke="var(--ink)" stroke-width="1.75" stroke-linejoin="round"/>` : ""}
+    <path d="${path(proj)}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-dasharray="5 4" stroke-linejoin="round"/>
+  </svg>`;
+}
+
+function renderDetail(d, animate) {
+  const a = d.actions.find(r => rowKey(r) === state.sel);
+  const el = $("#detail");
+  if (!a) { el.innerHTML = `<div class="empty">Pick a shelf to see its projection.</div>`; return; }
+  const ran = a.ACTUAL.every(v => v != null) ? (a.ACTUAL.includes(0) ? "It did run out" : "It made it to the truck") : "";
+  el.innerHTML = `
+    <span class="tag ${a.RISK_STATUS.split(" ")[0]}">${a.RISK_STATUS}</span>
+    <h3>${esc(a.SKU_NAME)}</h3>
+    <div class="store">${a.STORE_ID} · ${esc(a.AREA)}, ${esc(a.CITY)} · ${esc(a.CATEGORY)}</div>
+    <div class="big">${a.STOCK === 0 ? "<b>Empty</b><span>right now</span>" : a.HOURS_TO_OOS == null ? "<b>OK</b><span>until the truck</span>"
+      : `<b class="num">${a.HOURS_TO_OOS} h</b><span>until the shelf is empty</span>`}</div>
+    <div class="chart" id="chart">${chart(a, d.truck_h)}</div>
+    <div class="legend"><span><i class="dash"></i>Projected</span>${a.ACTUAL.every(v => v != null) ? `<span><i class="act"></i>What really happened</span>` : ""}</div>
+    <div class="facts">
+      <div><span>On shelf</span><b class="num">${a.STOCK}</b></div>
+      <div><span>Demand until truck</span><b class="num">${a.DEMAND_TO_TRUCK.toFixed(1)}</b></div>
+      <div><span>Stock-out risk</span><b class="num">${pct(a.RISK_PROB)}</b></div>
+      <div><span>Revenue at risk</span><b class="num">${inr(a.REVENUE_AT_RISK)}</b></div>
+    </div>
+    <div class="rec"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.2" stroke-linecap="round" aria-hidden="true" style="flex:none;margin-top:1px">${(a.RECOMMENDATION || "").startsWith("Transfer") ? '<path d="M4 7h13l-3-3M20 17H7l3 3"/>' : '<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>'}</svg>
+      <div><b>${esc(a.RECOMMENDATION || "Watch")}</b><small>${(a.RECOMMENDATION || "").startsWith("Transfer") ? "A same-city store has spare stock and still covers its own demand." : "No nearby store can spare enough. Order rounded to full cases."}</small></div></div>
+    ${ran ? `<p class="note">Backtest: ${ran}.</p>` : ""}`;
+  if (animate && !reduce) $("#chart").animate([{ clipPath: "inset(0 100% 0 0)" }, { clipPath: "inset(0 0 0 0)" }],
+    { duration: 520, easing: "cubic-bezier(.23,1,.32,1)" });
+}
+
+function renderBars(el, entries, max, fmt, cls = "") {
+  const keyed = new Map([...el.children].map(r => [r.dataset.k, r]));
+  el.innerHTML = entries.map(([k, v]) => `<div class="row" data-k="${esc(k)}"><span>${esc(k)}</span>
+    <div class="tr ${cls}"><b style="transform:scaleX(${keyed.get(k)?.dataset.s ?? 0})"></b></div><em class="num">${fmt(v)}</em></div>`).join("");
+  requestAnimationFrame(() => requestAnimationFrame(() => [...el.children].forEach((r, i) => {
+    const s = Math.max(entries[i][1] / max, .004); r.dataset.s = s; r.querySelector("b").style.transform = `scaleX(${s})`;
+  })));
+}
+
+function renderLower(d) {
   const cats = Object.entries(d.lost_by_category);
-  document.getElementById("lostcat").innerHTML = bars(cats, cats[0][1], inr);
+  renderBars($("#lost"), cats, cats.length ? cats[0][1] : 1, inr);
   const v = d.validation;
-  document.getElementById("valid").textContent = `Checked against simulator ground truth: estimated ${Math.round(v.estimated).toLocaleString()} lost units vs ${v.actual.toLocaleString()} actual (${((v.estimated - v.actual) / v.actual * 100).toFixed(0)}%). The estimate is deliberately conservative.`;
+  $("#valid").textContent = v.actual ? `Checked against the simulator's hidden ground truth: estimated ${v.estimated.toLocaleString("en-IN")} lost units vs ${v.actual.toLocaleString("en-IN")} actual (${Math.round((v.estimated - v.actual) / v.actual * 100)}%). The estimate is deliberately conservative.` : "";
+  const b = d.backtest, el = $("#bt");
+  if (!b) { el.innerHTML = `<div class="empty">No data after this hour to score against. Pick an earlier moment.</div>`; return; }
+  if (!el.querySelector(".bars")) el.innerHTML = `<div class="duo"><div><b class="num" data-b="actual"></b><span>Stock-outs that happened</span></div>
+    <div><b class="num" data-b="recall"></b><span>Caught in advance</span></div><div><b class="num" data-b="precision"></b><span>Alerts that were right</span></div></div>
+    <div class="note" style="margin:0 0 10px">Calibration: of the shelves given each predicted risk, the share that actually ran out</div><div class="bars"></div>`;
+  el.querySelector('[data-b="actual"]').textContent = b.actual;
+  el.querySelector('[data-b="recall"]').textContent = pct(b.recall);
+  el.querySelector('[data-b="precision"]').textContent = pct(b.precision);
+  renderBars(el.querySelector(".bars"), b.calibration.map(c => [`${Math.round(c.lo * 100)}–${Math.round(c.hi * 100)}%`, c.rate]), 1, pct, "acc");
+}
 
-  document.getElementById("bt").innerHTML = kpi(d.backtest.actual, "Stock-outs that happened") +
-    kpi(pct(d.backtest.recall), "Caught in advance") + kpi(pct(d.backtest.precision), "Alerts that were right");
-  document.getElementById("cal").innerHTML = bars(d.backtest.calibration.map(c => [`${c.bin} (${c.n})`, c.rate]), 1, pct);
-});
+function render(d) {
+  const prev = state.data;
+  state.data = d;
+  if (!d.actions.some(a => rowKey(a) === state.sel)) { const first = d.actions.find(a => a.STOCK > 0) || d.actions[0]; state.sel = first ? rowKey(first) : null; }
+  const cities = [...new Set(d.actions.map(a => a.CITY))].sort(), sel = $("#city");
+  if (sel.options.length === 1) cities.forEach(c => sel.add(new Option(c, c)));
+  renderHeader(d); renderKpis(d, prev); renderRows(d); renderDetail(d, !prev); renderLower(d);
+}
+
+// ---------- navigation ----------
+let pending = 0;
+async function go(key) {
+  const { lo, hi } = state.index;
+  key = key < lo ? lo : key > hi ? hi : key;
+  state.key = key;
+  const slider = $("#slider"), i = (toDate(key) - toDate(lo)) / 3600e3;
+  slider.value = i;
+  slider.style.setProperty("--p", (i / slider.max * 100) + "%");
+  history.replaceState(null, "", "#" + key);
+  const ticket = ++pending, slow = setTimeout(() => { $("#stage").classList.add("busy"); $("#load").classList.add("on"); }, 120);
+  try {
+    const d = await load(key);
+    if (ticket === pending) render(d);
+  } catch { if (ticket === pending) $("#engine").innerHTML = `<b>Unavailable</b>this hour is not in the hosted snapshot`; }
+  finally {
+    clearTimeout(slow);
+    if (ticket === pending) { $("#stage").classList.remove("busy"); $("#load").classList.remove("on"); }
+  }
+  // warm the neighbours so stepping and replay feel instant
+  [1, -1, 2].forEach(h => { const k = addH(key, h); if (k >= lo && k <= hi) load(k).catch(() => {}); });
+}
+
+function setPlaying(on) {
+  state.playing = on;
+  $("#play").setAttribute("aria-pressed", on);
+  $("#playLabel").textContent = on ? "Pause" : "Replay";
+  $("#playIcon").innerHTML = on ? '<path d="M6 4h4v16H6zM14 4h4v16h-4z"/>' : '<path d="M7 4v16l13-8z"/>';
+  clearTimeout(state.timer);
+  const tick = async () => {
+    if (!state.playing) return;
+    if (state.key >= state.index.hi) return setPlaying(false);
+    await go(addH(state.key, 1));
+    state.timer = setTimeout(tick, 900);
+  };
+  if (on) state.timer = setTimeout(tick, 200);
+}
+
+async function init() {
+  const saved = (() => { try { return localStorage.getItem("ss-theme"); } catch { return null; } })();
+  if (saved) document.documentElement.dataset.theme = saved;
+  $("#theme").onclick = () => {
+    const dark = getComputedStyle(document.documentElement).colorScheme === "dark";
+    document.documentElement.dataset.theme = dark ? "light" : "dark";
+    try { localStorage.setItem("ss-theme", document.documentElement.dataset.theme); } catch {}
+  };
+  try { state.index = await (await fetch("snap/index.json")).json(); }
+  catch { $("#mode").lastElementChild.textContent = "No data"; return; }
+  const { lo, hi, live } = state.index, n = (toDate(hi) - toDate(lo)) / 3600e3;
+  $("#mode").classList.toggle("snap", !live);
+  $("#mode").lastElementChild.textContent = live ? "Live · Exasol Personal" : innerWidth < 720 ? "Snapshot" : `Snapshot · ${shortFmt.format(toDate(lo))} – ${shortFmt.format(toDate(hi))}`;
+  const slider = $("#slider");
+  slider.max = n;
+  const days = [];
+  for (let k = lo; k <= hi; k = addH(k, 24 - toDate(k).getUTCHours())) {
+    if (toDate(k).getUTCHours() === 0 || k === lo) days.push(k);
+  }
+  const step = Math.ceil(days.length / Math.max(2, Math.floor(slider.clientWidth / 90)));  // ~90px per label
+  $("#days").innerHTML = days.filter((_, i) => i % step === 0)
+    .map(k => `<span style="left:${(toDate(k) - toDate(lo)) / 3600e3 / n * 100}%">${shortFmt.format(toDate(k))}</span>`).join("");
+
+  let raf = 0;
+  slider.oninput = () => { cancelAnimationFrame(raf); setPlaying(false); raf = requestAnimationFrame(() => go(addH(lo, +slider.value))); };
+  $("#prev").onclick = () => { setPlaying(false); go(addH(state.key, -1)); };
+  $("#next").onclick = () => { setPlaying(false); go(addH(state.key, 1)); };
+  $("#play").onclick = () => { if (!state.playing && state.key >= hi) go(addH(hi, -23)); setPlaying(!state.playing); };
+  addEventListener("keydown", e => {
+    if (e.target.closest("input, select, textarea")) return;
+    if (e.key === "ArrowLeft") { e.preventDefault(); $("#prev").click(); }
+    if (e.key === "ArrowRight") { e.preventDefault(); $("#next").click(); }
+    if (e.key === " " && e.target === document.body) { e.preventDefault(); $("#play").click(); }
+  });
+  $("#seg").onclick = e => {
+    const b = e.target.closest("button"); if (!b) return;
+    $("#seg").querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b));
+    state.status = b.dataset.s; state.limit = 40; renderRows(state.data);
+  };
+  $("#city").onchange = e => { state.city = e.target.value; state.limit = 40; renderRows(state.data); };
+  $("#more").onclick = () => { state.limit = Infinity; renderRows(state.data); };
+  $("#rows").onclick = e => {
+    const tr = e.target.closest("tr[data-key]"); if (!tr || tr.dataset.key === state.sel) return;
+    state.sel = tr.dataset.key;
+    $("#rows").querySelectorAll("tr").forEach(r => r.classList.toggle("sel", r === tr));
+    renderDetail(state.data, true);
+  };
+  const hash = location.hash.slice(1);
+  go(/^\d{10}$/.test(hash) ? hash : state.index.default);
+}
+init();
 </script>
 </body>
 </html>
