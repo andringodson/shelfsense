@@ -5,6 +5,7 @@
 /snap/<YYYYMMDDHH>.json is served from site/snap/ when pre-exported (that is all Vercel has),
 otherwise computed from Exasol on demand and kept in memory.
 """
+import functools
 import json
 import os
 import socket
@@ -17,8 +18,11 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from load import DEFAULT_AS_OF
 from shelfsense_db import connect, snapshot
 
-SITE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "site")
+HERE = os.path.dirname(os.path.abspath(__file__))
+SITE = os.path.join(HERE, "site")
+CACHE = os.path.join(HERE, "data", "cache")  # computed hours survive restarts; load.py clears it
 conn, lock, cache = connect(), threading.Lock(), {}
+waiting = 0  # user requests queued for the connection; the warmer yields to them
 
 
 def key_to_ts(key):
@@ -26,15 +30,38 @@ def key_to_ts(key):
 
 
 def live_snapshot(key):
+    if key in cache:
+        return cache[key]
+    path = os.path.join(CACHE, key + ".json")
+    if os.path.exists(path):
+        with open(path, "rb") as f:
+            cache[key] = f.read()
+        return cache[key]
     with lock:  # one connection, and APP_STATE is shared: compute one hour at a time
         if key not in cache:
             t = time.perf_counter()
             d = snapshot(conn, key_to_ts(key))
             d["ms"] = round((time.perf_counter() - t) * 1000)
             cache[key] = json.dumps(d).encode()
+            os.makedirs(CACHE, exist_ok=True)
+            with open(path, "wb") as f:
+                f.write(cache[key])
         return cache[key]
 
 
+def warm():
+    """Pre-compute every hour, nearest to the default first, pausing whenever a user request is waiting."""
+    idx = index()
+    lo, hi, d0 = (datetime.strptime(idx[k], "%Y%m%d%H") for k in ("lo", "hi", "default"))
+    hours = [lo + timedelta(hours=h) for h in range(int((hi - lo).total_seconds() // 3600) + 1)]
+    for ts in sorted(hours, key=lambda h: abs(h - d0)):
+        while waiting:
+            time.sleep(0.05)
+        live_snapshot(ts.strftime("%Y%m%d%H"))
+    print(f"warm: all {len(hours)} hours cached")
+
+
+@functools.lru_cache(maxsize=1)
 def index():
     with lock:
         lo, hi = conn.execute("SELECT MIN(TS), MAX(TS) FROM SALES_HOURLY").fetchone()
@@ -52,10 +79,14 @@ class Handler(SimpleHTTPRequestHandler):
         name = path.removeprefix("/snap/").removesuffix(".json")
         if path.startswith("/snap/") and name.isdigit() and len(name) == 10:
             if not os.path.exists(os.path.join(SITE, "snap", name + ".json")):
+                global waiting
+                waiting += 1
                 try:
                     return self.send_json(live_snapshot(name))
                 except ValueError:
                     return self.send_error(400, "bad hour")
+                finally:
+                    waiting -= 1
         return super().do_GET()
 
     def send_json(self, body):
@@ -81,4 +112,5 @@ class DualStackServer(ThreadingHTTPServer):
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     print(f"ShelfSense on http://localhost:{port}")
+    threading.Thread(target=warm, daemon=True).start()
     DualStackServer(("::", port), partial(Handler, directory=SITE)).serve_forever()

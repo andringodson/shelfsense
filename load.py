@@ -3,6 +3,7 @@
     python generate_data.py && python load.py
 """
 import os
+import shutil
 import sys
 import time
 
@@ -31,6 +32,7 @@ def main():
     conn.execute("INSERT INTO SHELFSENSE.HORIZON SELECT LEVEL FROM DUAL CONNECT BY LEVEL <= 48")
     conn.execute("INSERT INTO SHELFSENSE.APP_STATE VALUES ({ts})", {"ts": DEFAULT_AS_OF})
     run_sql_file(conn, os.path.join(HERE, "sql", "02_analytics.sql"))
+    shutil.rmtree(os.path.join(DATA, "cache"), ignore_errors=True)  # server.py's computed hours are now stale
     print("Views built. Try: SELECT * FROM SHELFSENSE.V_ACTIONS WHERE RISK_STATUS <> 'OK' "
           "ORDER BY REVENUE_AT_RISK DESC;")
 

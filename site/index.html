@@ -8,7 +8,20 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%230F5C43'/><path d='M8 11h16M8 16h16M8 21h10' stroke='white' stroke-width='2.5' stroke-linecap='round'/><circle cx='23' cy='21' r='2.5' fill='%23F2A541'/></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Instrument+Serif&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Instrument+Serif&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Instrument+Serif&display=swap" rel="stylesheet"></noscript>
+<script>
+// Start the data requests while the rest of the page parses: index, then the first hour (in parallel when the URL names it).
+window.__boot = (() => {
+  const t = performance.now(), h = location.hash.slice(1), named = /^\d{10}$/.test(h);
+  const get = k => fetch(`snap/${k}.json`).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
+  const index = fetch("snap/index.json").then(r => r.json());
+  const firstKey = named ? Promise.resolve(h) : index.then(i => i.default);
+  const first = named ? get(h) : firstKey.then(get);
+  first.catch(() => {});
+  return { index, firstKey, first, t };
+})();
+</script>
 <style>
 :root {
   --bg:#F8F9F7; --surface:#FFFFFF; --sunken:#F1F3F0; --ink:#111614; --muted:#5E6763; --faint:#8C9590; --line:#E5E8E4;
@@ -78,6 +91,10 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:18px; h
   border:2px solid var(--brand); box-shadow:var(--shadow); transition:transform 160ms var(--ease-out) }
 input[type=range]::-moz-range-thumb { width:14px; height:14px; border-radius:50%; background:var(--surface); border:2px solid var(--brand) }
 input[type=range]:active::-webkit-slider-thumb { transform:scale(1.15) }
+.thumb-label { position:absolute; top:-22px; font-size:11.5px; font-weight:500; white-space:nowrap;
+  padding:2px 7px; border-radius:6px; background:var(--ink); color:var(--bg); opacity:0; pointer-events:none; transition:opacity 150ms ease }
+.track:hover .thumb-label, .track:focus-within .thumb-label, .track.drag .thumb-label { opacity:1 }
+tbody tr:focus-visible { outline:2px solid var(--brand); outline-offset:-2px }
 .days { position:absolute; left:9px; right:9px; bottom:0; height:18px; font-size:11.5px; color:var(--faint) }
 .days span { position:absolute; transform:translateX(-50%); white-space:nowrap }
 .days span::before { content:""; position:absolute; left:50%; top:-9px; width:1px; height:5px; background:var(--line) }
@@ -223,7 +240,7 @@ footer a { color:var(--muted) }
       <button class="icon-btn" id="next" aria-label="Next hour" title="Next hour (→)">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>
     </div>
-    <div class="track"><input type="range" id="slider" min="0" max="0" value="0" aria-label="Replay hour"><div class="days" id="days"></div></div>
+    <div class="track" id="track"><span class="thumb-label num" id="thumbLabel"></span><input type="range" id="slider" min="0" max="0" value="0" aria-label="Replay hour"><div class="days" id="days"></div></div>
   </section>
 
   <div class="stage" id="stage">
@@ -324,7 +341,9 @@ function tween(el, to, money) {
 // ---------- render ----------
 function renderHeader(d) {
   const at = toDate(state.key);
-  $("#when").innerHTML = `${esc(dayFmt.format(at))} <em>${String(at.getUTCHours()).padStart(2, "0")}:00</em>`;
+  const hh = String(at.getUTCHours()).padStart(2, "0") + ":00";
+  $("#when").innerHTML = `${esc(dayFmt.format(at))} <em>${hh}</em>`;
+  document.title = `ShelfSense · ${shortFmt.format(at)} ${hh}`;
   $("#truck").innerHTML = `Next delivery truck at <b>06:00</b>, in <b class="num">${d.truck_h} h</b> · ${d.shelves.toLocaleString()} shelves scored across 25 dark stores`;
   $("#engine").innerHTML = state.hit
     ? `<b class="num">instant</b>from cache · Exasol computed it in ${(d.ms / 1000).toFixed(2)} s`
@@ -338,7 +357,7 @@ function renderKpis(d, prev) {
   document.querySelectorAll("[data-d]").forEach(el => {
     const k = el.dataset.d, diff = prev ? d.kpi[k] - prev.kpi[k] : 0;
     el.className = "delta num" + (diff > 0 ? " up" : diff < 0 ? " down" : "");
-    el.textContent = !prev || !diff ? " " : `${diff > 0 ? "▲" : "▼"} ${fmtN(Math.abs(diff), el.hasAttribute("data-inr"))} vs last view`;
+    el.textContent = !prev || !diff ? " " : `${diff > 0 ? "▲" : "▼"} ${fmtN(Math.abs(diff), el.hasAttribute("data-inr"))} ${state.step === 1 ? "vs previous hour" : "vs last view"}`;
   });
 }
 
@@ -352,7 +371,7 @@ function renderRows(d) {
   const before = new Map([...tbody.children].map(tr => [tr.dataset.key, tr.getBoundingClientRect().top]));
   tbody.innerHTML = shown.map(a => {
     const k = rowKey(a), [verb, ...rest] = (a.RECOMMENDATION || "Watch").split(" ");
-    return `<tr data-key="${k}" class="${k === state.sel ? "sel" : ""}${before.size && !before.has(k) ? " enter" : ""}">
+    return `<tr tabindex="0" data-key="${k}" class="${k === state.sel ? "sel" : ""}${before.size && !before.has(k) ? " enter" : ""}">
       <td><span class="tag ${a.RISK_STATUS.split(" ")[0]}">${a.RISK_STATUS}</span></td>
       <td><div class="prod">${esc(a.SKU_NAME)}</div><div class="store">${a.STORE_ID} · ${esc(a.AREA)}, ${esc(a.CITY)}</div></td>
       <td class="r num">${a.STOCK}</td>
@@ -459,10 +478,15 @@ let pending = 0;
 async function go(key) {
   const { lo, hi } = state.index;
   key = key < lo ? lo : key > hi ? hi : key;
+  state.step = state.key ? Math.abs(toDate(key) - toDate(state.key)) / 3600e3 : 0;
   state.key = key;
   const slider = $("#slider"), i = (toDate(key) - toDate(lo)) / 3600e3;
   slider.value = i;
   slider.style.setProperty("--p", (i / slider.max * 100) + "%");
+  const lab = $("#thumbLabel"), at = toDate(key);
+  lab.textContent = `${shortFmt.format(at)} ${String(at.getUTCHours()).padStart(2, "0")}:00`;
+  lab.style.left = `calc(9px + (100% - 18px) * ${i / slider.max})`;
+  lab.style.transform = `translateX(${-100 * i / slider.max}%)`;  // slide the anchor so the label never leaves the track
   history.replaceState(null, "", "#" + key);
   const ticket = ++pending, slow = setTimeout(() => { $("#stage").classList.add("busy"); $("#load").classList.add("on"); }, 120);
   try {
@@ -502,11 +526,18 @@ async function init() {
     document.documentElement.dataset.theme = dark ? "light" : "dark";
     try { localStorage.setItem("ss-theme", document.documentElement.dataset.theme); } catch {}
   };
-  try { state.index = await (await fetch("snap/index.json")).json(); }
+  const boot = window.__boot;
+  try { state.index = await boot.index; }
   catch { $("#mode").lastElementChild.textContent = "No data"; return; }
+  // reuse the request <head> already started instead of fetching the first hour twice
+  const k0 = await boot.firstKey.catch(() => null);
+  if (k0 && !cache.has(k0)) {
+    const p = boot.first.then(d => (d.fetchMs = performance.now() - boot.t, d));
+    cache.set(k0, p); p.then(() => p.done = true, () => cache.delete(k0));
+  }
   const { lo, hi, live } = state.index, n = (toDate(hi) - toDate(lo)) / 3600e3;
   $("#mode").classList.toggle("snap", !live);
-  $("#mode").lastElementChild.textContent = live ? "Live · Exasol Personal" : innerWidth < 720 ? "Snapshot" : `Snapshot · ${shortFmt.format(toDate(lo))} – ${shortFmt.format(toDate(hi))}`;
+  $("#mode").lastElementChild.textContent = live ? (innerWidth < 720 ? "Live · Exasol" : "Live · Exasol Personal") : innerWidth < 720 ? "Snapshot" : `Snapshot · ${shortFmt.format(toDate(lo))} – ${shortFmt.format(toDate(hi))}`;
   const slider = $("#slider");
   slider.max = n;
   const days = [];
@@ -518,6 +549,8 @@ async function init() {
     .map(k => `<span style="left:${(toDate(k) - toDate(lo)) / 3600e3 / n * 100}%">${shortFmt.format(toDate(k))}</span>`).join("");
 
   let raf = 0;
+  slider.onpointerdown = () => $("#track").classList.add("drag");
+  addEventListener("pointerup", () => $("#track").classList.remove("drag"));
   slider.oninput = () => { cancelAnimationFrame(raf); setPlaying(false); raf = requestAnimationFrame(() => go(addH(lo, +slider.value))); };
   $("#prev").onclick = () => { setPlaying(false); go(addH(state.key, -1)); };
   $("#next").onclick = () => { setPlaying(false); go(addH(state.key, 1)); };
@@ -535,6 +568,7 @@ async function init() {
   };
   $("#city").onchange = e => { state.city = e.target.value; state.limit = 40; renderRows(state.data); };
   $("#more").onclick = () => { state.limit = Infinity; renderRows(state.data); };
+  $("#rows").onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.target.closest("tr")?.click(); } };
   $("#rows").onclick = e => {
     const tr = e.target.closest("tr[data-key]"); if (!tr || tr.dataset.key === state.sel) return;
     state.sel = tr.dataset.key;
