@@ -374,7 +374,8 @@ function renderRows(d) {
   const more = $("#more");
   more.hidden = list.length <= state.limit;
   more.textContent = `Show all ${list.length} shelves`;
-  $("#boardNote").textContent = `${list.length} shelves need attention. ${d.kpi.transfers} can be fixed by moving stock between stores in the same city, and the rest need an expedited order. Ranked by revenue at risk.`;
+  const transfers = list.filter(a => (a.RECOMMENDATION || "").startsWith("Transfer")).length;
+  $("#boardNote").textContent = `${list.length} shelves need attention. ${transfers} can be fixed by moving stock between stores in the same city, and the rest need an expedited order. Ranked by revenue at risk.`;
 }
 
 function chart(a, truckH) {

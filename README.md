@@ -154,4 +154,4 @@ No external APIs are called at runtime. The dashboard is plain HTML, CSS and Jav
 
 ## Demo
 
-📹 Demo video: TODO · 📊 Pitch deck: [PDF](docs/ShelfSense-pitch.pdf) · [PPTX](docs/ShelfSense-pitch.pptx)
+📹 Demo video: [brag-output/brag.mp4](brag-output/brag.mp4) (35 s, captured from the real dashboard) · 📊 Pitch deck: [PDF](docs/ShelfSense-pitch.pdf) · [PPTX](docs/ShelfSense-pitch.pptx)

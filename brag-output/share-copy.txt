@@ -1,0 +1,1 @@
+An empty shelf looks exactly like a quiet hour, so nobody notices until the customer has gone. ShelfSense re-scores every dark-store shelf each hour inside Exasol, flags what will run empty before the 06:00 truck, and backtests every call. Replay it yourself: https://shelfsense-exathon.vercel.app
